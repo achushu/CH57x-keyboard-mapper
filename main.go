@@ -49,6 +49,7 @@ func main() {
 
 	kbd.BindMapping(MapKeys(Custom))
 	fmt.Println("done!")
+	os.Exit(0)
 }
 
 func SelectInterface() hid.DeviceInfo {

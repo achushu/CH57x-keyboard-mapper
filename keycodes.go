@@ -180,11 +180,11 @@ const (
 // 03 01 12 cd 00 00 00
 const (
 	PLAY   Mediacode = 0xcd
-	PREV             = 0xb6
-	NEXT             = 0xb5
-	MUTE             = 0xe2
-	VOL_UP           = 0xe9
-	VOL_DN           = 0xea
+	PREV   Mediacode = 0xb6
+	NEXT   Mediacode = 0xb5
+	MUTE   Mediacode = 0xe2
+	VOL_UP Mediacode = 0xe9
+	VOL_DN Mediacode = 0xea
 )
 
 // 03 01 13 04 00 00 00
@@ -199,6 +199,6 @@ const (
 // magic key layer len seq ?? code mod
 const (
 	MS_WL      Wheelcode = 0x00
-	MS_WL_UP             = 0x01
-	MS_WL_DOWN           = 0xff
+	MS_WL_UP   Wheelcode = 0x01
+	MS_WL_DOWN Wheelcode = 0xff
 )

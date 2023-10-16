@@ -56,7 +56,11 @@ func NewMacroSequence(key Key, seq Sequence) *Macro {
 	switch seq.Key.(type) {
 	case Keycode:
 		m.Type = MACROKEYS
+	case Mediacode:
+		m.Type = MACROPLAY
 	case Mousecode:
+		m.Type = MACROMOUSE
+	case Wheelcode:
 		m.Type = MACROMOUSE
 	}
 	return m
@@ -68,6 +72,12 @@ func (m *Macro) Add(mod Modifier, key Code) error {
 		if m.Type == MACRONONE {
 			m.Type = MACROKEYS
 		} else if m.Type != MACROKEYS {
+			return ErrTypeMixing
+		}
+	case Mediacode:
+		if m.Type == MACRONONE {
+			m.Type = MACROPLAY
+		} else if m.Type != MACROPLAY {
 			return ErrTypeMixing
 		}
 	case Mousecode:
@@ -195,9 +205,100 @@ func (k *Keyboard) BindKeyMacro(macro *Macro) error {
 	return k.sendKeybindEnd()
 }
 
+func (k *Keyboard) BindMediaMacro(macro *Macro) error {
+	var err error
+	err = k.sendKeybindStart()
+	if err != nil {
+		return err
+	}
+
+	// header
+	req := make([]byte, 64)
+	req[0] = byte(macro.Key)                      // key ID
+	req[1] = byte(macro.Layer) + byte(macro.Type) // layer and macro type
+
+	var combo []Sequence
+	combo = macro.Combo
+	if (len(combo) > 1) {
+		//the rest of the keys will be ignored for now
+		fmt.Println("can't bind a media key macro larger then one key")
+	}
+	req[2] = byte(combo[0].Key.Code()) // media key code
+	//idk if there is anything you can do with the next bytes...
+	req[3] = byte(0x00)
+	req[4] = byte(0x00)
+	req[5] = byte(0x00)
+
+	err = k.Send(req)
+	if err != nil {
+		return err
+	}
+
+	return k.sendKeybindEnd()
+}
+
+func (k *Keyboard) BindMouseMacro(macro *Macro) error {
+	var err error
+	err = k.sendKeybindStart()
+	if err != nil {
+		return err
+	}
+
+	// header
+	req := make([]byte, 64)
+	req[0] = byte(macro.Key)                      // key ID
+	req[1] = byte(macro.Layer) + byte(macro.Type) // layer and macro type
+
+	var combo []Sequence
+	combo = macro.Combo
+	if (len(combo) > 1) {
+		//the rest of the buttons will be ignored for now
+		fmt.Println("can't bind a mouse macro larger then one key")
+	}
+	switch combo[0].Key.(type) {
+	case Mousecode:
+		req[2] = byte(combo[0].Key.Code()) // mouse button code
+		//idk if there is anything you can do with the next bytes...
+		req[3] = byte(0x00)
+		req[4] = byte(0x00)
+		req[5] = byte(0x00)
+	case Wheelcode:
+		req[2] = byte(0x00) // length?
+		req[3] = byte(0x00) // seq
+		req[4] = byte(0x00) // ??
+		req[5] = byte(combo[0].Key.Code()) // mouse wheel code
+		req[6] = byte(combo[0].Mod)
+	default:
+		fmt.Println("unknown mouse key type", combo[0].Key)
+	}
+
+	err = k.Send(req)
+	if err != nil {
+		return err
+	}
+
+	return k.sendKeybindEnd()
+}
+
+func (k *Keyboard) BindMacro(macro *Macro) error {
+	var err error
+	switch macro.Type {
+	case MACROKEYS:
+		err = k.BindKeyMacro(macro)
+	case MACROPLAY:
+		err = k.BindMediaMacro(macro)
+	case MACROMOUSE:
+		err = k.BindMouseMacro(macro)
+	default:
+		fmt.Println("binding a macro of type", macro.Type, "is unsupported")
+		err = ErrUnsupported
+	}
+	return err
+}
+
 func (k *Keyboard) BindMapping(mapping []*Macro) {
 	for _, m := range mapping {
-		err := k.BindKeyMacro(m)
+		err := k.BindMacro(m)
 		if err != nil {
 			fmt.Println("error binding key", m.Key, err)
 		} else {
